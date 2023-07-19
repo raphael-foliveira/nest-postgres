@@ -1,14 +1,14 @@
-create table if not exists courses (
-    id serial primary key,
-    name varchar,
-    length integer
+CREATE TABLE IF NOT EXISTS courses (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR,
+    length INTEGER
 );
 
-create table if not exists students (
-    id serial primary key,
-    name varchar unique,
-    courseid integer references courses on delete
-    set
-        null,
-        semester integer
+CREATE TABLE IF NOT EXISTS students (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR UNIQUE,
+    courseid INTEGER REFERENCES courses ON DELETE
+    SET
+        NULL,
+        semester INTEGER
 );
