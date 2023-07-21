@@ -21,9 +21,6 @@ export class StudentsRepository {
         createStudentDto.semester,
       ],
     );
-    if (insertResult.rowCount === 0) {
-      throw new ConflictException('Student already exists');
-    }
     return insertResult.rows[0];
   }
 

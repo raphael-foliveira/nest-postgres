@@ -6,22 +6,25 @@ import {
 } from '@nestjs/common';
 import { Pool } from 'pg';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { CourseWithStudents } from './entities/course.entity';
 
 @Injectable()
 export class CoursesRepository {
   constructor(@Inject('DATABASE_CONNECTION') private client: Pool) {}
 
   async create(createCourtseDto: CreateCourseDto) {
-    const queryResult = await this.client.query(
-      `
+    try {
+      const queryResult = await this.client.query(
+        `
         INSERT INTO courses (name, length) VALUES ($1, $2) RETURNING id;
-    `,
-      [createCourtseDto.name, createCourtseDto.length],
-    );
-    if (queryResult.rowCount === 0) {
+        `,
+        [createCourtseDto.name, createCourtseDto.length],
+      );
+      return queryResult.rows[0];
+    } catch (e) {
+      console.log(e);
       throw new ConflictException('Course already exists');
     }
-    return queryResult.rows[0];
   }
 
   async findAll() {
@@ -31,7 +34,7 @@ export class CoursesRepository {
     return queryResult.rows;
   }
 
-  async findOne(id: number) {
+  async findOne(id: number): Promise<CourseWithStudents> {
     const queryResult = await this.client.query(
       `
         SELECT * FROM courses WHERE id = $1;
@@ -40,7 +43,7 @@ export class CoursesRepository {
     );
     const studentsQueryResult = await this.client.query(
       `
-        SELECT students.name, students.semester FROM students WHERE courseId = $1;
+        SELECT students.id, students.name, students.semester FROM students WHERE courseId = $1;
     `,
       [id],
     );

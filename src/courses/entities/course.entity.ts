@@ -1,3 +1,5 @@
+import { Student } from 'src/students/entities/student.entity';
+
 export class Course {
   id: number;
   name: string;
@@ -8,8 +10,5 @@ export class CourseWithStudents {
   id: number;
   name: string;
   length: number;
-  students: {
-    name: string;
-    semester: number;
-  };
+  students: Student[];
 }
