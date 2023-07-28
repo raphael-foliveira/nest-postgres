@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 
-export const courseFixtures = () => {
+const courseFixtures = () => {
   let query = 'INSERT INTO courses (name, length) VALUES ';
   for (let i = 1; i <= 15; i++) {
     query += `('Course ${i}', ${Math.floor(Math.random() * 10)}),`;
@@ -12,7 +12,7 @@ export const courseFixtures = () => {
   return query;
 };
 
-export const studentsFixtures = (courseIds: number[]) => {
+const studentsFixtures = (courseIds: number[]) => {
   let query = 'INSERT INTO students (name, courseId, semester) VALUES ';
   for (let i = 1; i <= 40; i++) {
     query += `('Student ${i}', ${Math.floor(
@@ -24,6 +24,12 @@ export const studentsFixtures = (courseIds: number[]) => {
     }
   }
   return query;
+};
+
+export const addFixtures = async (pool: Pool) => {
+  await pool.query(courseFixtures());
+  const courseIds = await pool.query('SELECT id FROM courses');
+  await pool.query(studentsFixtures(courseIds.rows.map((r) => r.id)));
 };
 
 export const getFixtures = async (pool: Pool) => {

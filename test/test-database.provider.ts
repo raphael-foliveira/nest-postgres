@@ -2,7 +2,6 @@ import { Provider } from '@nestjs/common';
 import { Pool } from 'pg';
 import { migrations } from '../src/database/migrations/migrations';
 import { schema } from '../src/database/schema';
-import { courseFixtures, studentsFixtures } from './fixtures/fixtures';
 
 export const testDatabaseProvider: Provider = {
   provide: 'DATABASE_CONNECTION',

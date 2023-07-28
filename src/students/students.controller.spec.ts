@@ -7,11 +7,7 @@ import { CoursesRepository } from '../courses/courses.repository';
 import { Pool } from 'pg';
 import { testDatabaseProvider } from '../../test/test-database.provider';
 import { ConfigModule } from '@nestjs/config';
-import {
-  courseFixtures,
-  getFixtures,
-  studentsFixtures,
-} from '../../test/fixtures/fixtures';
+import { addFixtures, getFixtures } from '../../test/fixtures/fixtures';
 import { Course } from '../../src/courses/entities/course.entity';
 import { CreateStudentDto } from './dto/create-student.dto';
 
@@ -44,9 +40,7 @@ describe('StudentsController', () => {
   });
 
   beforeEach(async () => {
-    await pool.query(courseFixtures());
-    const courseIds = await pool.query('SELECT id FROM courses');
-    await pool.query(studentsFixtures(courseIds.rows.map((r) => r.id)));
+    await addFixtures(pool);
 
     const fixtures = await getFixtures(pool);
     students = fixtures.students;
