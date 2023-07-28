@@ -1,24 +1,59 @@
+import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { Pool } from 'pg';
+import { Student } from 'src/students/entities/student.entity';
+import {
+  courseFixtures,
+  getFixtures,
+  studentsFixtures,
+} from '../../test/fixtures/fixtures';
+import { testDatabaseProvider } from '../../test/test-database.provider';
 import { CoursesController } from './courses.controller';
-import { CoursesService } from './courses.service';
 import { CoursesRepository } from './courses.repository';
+import { CoursesService } from './courses.service';
+import { Course } from './entities/course.entity';
 
 describe('CoursesController', () => {
   let controller: CoursesController;
-  let mockPool: { query: jest.Mock };
+  let pool: Pool;
+  let students: Student[];
+  let courses: Course[];
+
+  const getNonExistingId = () => {
+    let nonExistingId = 1;
+    while (courses.map((c) => c.id).includes(nonExistingId)) {
+      nonExistingId++;
+    }
+    return nonExistingId.toString();
+  };
 
   beforeAll(async () => {
-    mockPool = { query: jest.fn() };
     const module = await Test.createTestingModule({
+      imports: [ConfigModule.forRoot()],
       controllers: [CoursesController],
-      providers: [
-        CoursesService,
-        CoursesRepository,
-        { provide: 'DATABASE_CONNECTION', useValue: mockPool },
-      ],
+      providers: [CoursesService, CoursesRepository, testDatabaseProvider],
     }).compile();
-
     controller = module.get<CoursesController>(CoursesController);
+    pool = module.get<Pool>('DATABASE_CONNECTION');
+  });
+
+  beforeEach(async () => {
+    await pool.query(courseFixtures());
+    const courseIds = await pool.query('SELECT id FROM courses');
+    await pool.query(studentsFixtures(courseIds.rows.map((r) => r.id)));
+
+    const fixtures = await getFixtures(pool);
+    students = fixtures.students;
+    courses = fixtures.courses;
+  });
+
+  afterEach(async () => {
+    await pool.query('DELETE FROM students');
+    await pool.query('DELETE FROM courses');
+  });
+
+  afterAll(async () => {
+    await pool.end();
   });
 
   it('should be defined', () => {
@@ -27,82 +62,39 @@ describe('CoursesController', () => {
 
   describe('findAll', () => {
     it('should return all courses', async () => {
-      const result = [
-        { id: 1, name: 'Math', length: 8 },
-        { id: 2, name: 'Arts', length: 8 },
-      ];
-      mockPool.query.mockResolvedValue({
-        rows: result.map((c) => ({
-          id: c.id,
-          name: c.name,
-          length: c.length,
-        })),
-      });
-      expect(await controller.findAll()).toEqual(result);
+      expect(await controller.findAll()).toEqual(courses);
     });
   });
 
   describe('findOne', () => {
     it('should return a course', async () => {
-      const result = {
-        id: 1,
-        name: 'Math',
-        length: 8,
-        students: [
-          { id: 1, name: 'john', semester: 1 },
-          { id: 2, name: 'doe', semester: 2 },
-        ],
-      };
-      mockPool.query
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              id: result.id,
-              name: result.name,
-              length: result.length,
-            },
-          ],
-        })
-        .mockResolvedValueOnce({
-          rows: result.students,
-        });
-      expect(await controller.findOne('1')).toEqual(result);
+      const course = courses[0];
+      expect(await controller.findOne(course.id.toString())).toEqual(course);
     });
 
     it('should throw an error if the course does not exist', async () => {
-      mockPool.query.mockResolvedValueOnce({
-        rowCount: 0,
-      });
-      await expect(controller.findOne('1')).rejects.toThrowError(
-        'Course with id 1 not found',
+      const id = getNonExistingId();
+      await expect(controller.findOne(id)).rejects.toThrowError(
+        `Course with id ${id} not found`,
       );
     });
   });
 
   describe('create', () => {
     it('should create a course', async () => {
-      const result = { id: 1 };
-      mockPool.query.mockResolvedValueOnce({
-        rows: [result],
-      });
-      expect(
+      expect(courses).not.toContainEqual(
         await controller.create({
           name: 'Math',
           length: 8,
         }),
-      ).toEqual(result);
+      );
     });
 
     it('should throw an error if the course already exists', async () => {
-      mockPool.query.mockResolvedValueOnce({
-        rowCount: 0,
-      });
-      await expect(
-        controller.create({
-          name: 'Math',
-          length: 8,
-        }),
-      ).rejects.toThrowError('Course already exists');
+      const { id, ...course } = courses[1];
+      await expect(controller.create(course)).rejects.toThrowError(
+        'Course already exists',
+      );
     });
   });
 });
