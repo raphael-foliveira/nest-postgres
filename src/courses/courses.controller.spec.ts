@@ -8,12 +8,15 @@ import { CoursesController } from './courses.controller';
 import { CoursesRepository } from './courses.repository';
 import { CoursesService } from './courses.service';
 import { Course } from './entities/course.entity';
+import * as supertest from 'supertest';
+import { NestApplication } from '@nestjs/core';
 
 describe('CoursesController', () => {
   let controller: CoursesController;
   let pool: Pool;
   let students: Student[];
   let courses: Course[];
+  let app: NestApplication;
 
   const getNonExistingId = () => {
     let nonExistingId = 1;
@@ -31,6 +34,8 @@ describe('CoursesController', () => {
     }).compile();
     controller = module.get<CoursesController>(CoursesController);
     pool = module.get<Pool>('DATABASE_CONNECTION');
+    app = module.createNestApplication();
+    await app.init();
   });
 
   beforeEach(async () => {
@@ -56,39 +61,52 @@ describe('CoursesController', () => {
 
   describe('findAll', () => {
     it('should return all courses', async () => {
-      expect(await controller.findAll()).toEqual(courses);
+      return supertest(app.getHttpServer())
+        .get('/courses')
+        .expect(200)
+        .then((res) => {
+          expect(res.body).toEqual(courses);
+        });
     });
   });
 
   describe('findOne', () => {
     it('should return a course', async () => {
       const course = courses[0];
-      expect(await controller.findOne(course.id.toString())).toEqual(course);
+      return supertest(app.getHttpServer())
+        .get(`/courses/${course.id}`)
+        .expect(200)
+        .then((res) => {
+          expect(res.body).toEqual(course);
+        });
     });
 
     it('should throw an error if the course does not exist', async () => {
       const id = getNonExistingId();
-      await expect(controller.findOne(id)).rejects.toThrowError(
-        `Course with id ${id} not found`,
-      );
+      return supertest(app.getHttpServer()).get(`/courses/${id}`).expect(404);
     });
   });
 
   describe('create', () => {
     it('should create a course', async () => {
-      expect(courses).not.toContainEqual(
-        await controller.create({
+      return supertest(app.getHttpServer())
+        .post('/courses')
+        .send({
           name: 'Math',
           length: 8,
-        }),
-      );
+        })
+        .expect(201)
+        .then((res) => {
+          expect(courses).not.toContainEqual(res.body);
+        });
     });
 
     it('should throw an error if the course already exists', async () => {
       const { id, ...course } = courses[1];
-      await expect(controller.create(course)).rejects.toThrowError(
-        'Course already exists',
-      );
+      return supertest(app.getHttpServer())
+        .post('/courses')
+        .send(course)
+        .expect(409);
     });
   });
 });

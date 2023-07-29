@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { Student } from './entities/student.entity';
@@ -14,7 +14,11 @@ export class StudentsService {
 
   async create(createStudentDto: CreateStudentDto): Promise<{ id: number }> {
     await this.coursesRepository.findOne(createStudentDto.courseId);
-    return this.repository.create(createStudentDto);
+    try {
+      return await this.repository.create(createStudentDto);
+    } catch {
+      throw new ConflictException('Student already exists');
+    }
   }
 
   async findAll(): Promise<Student[]> {

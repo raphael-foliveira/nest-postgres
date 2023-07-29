@@ -10,12 +10,15 @@ import { ConfigModule } from '@nestjs/config';
 import { addFixtures, getFixtures } from '../../test/fixtures/fixtures';
 import { Course } from '../../src/courses/entities/course.entity';
 import { CreateStudentDto } from './dto/create-student.dto';
+import * as supertest from 'supertest';
+import { NestApplication } from '@nestjs/core';
 
 describe('StudentsController', () => {
   let controller: StudentsController;
   let pool: Pool;
   let students: Student[];
   let courses: Course[];
+  let app: NestApplication;
 
   const getNonExistingId = () => {
     let nonExistingId = 1;
@@ -37,6 +40,8 @@ describe('StudentsController', () => {
     }).compile();
     controller = module.get<StudentsController>(StudentsController);
     pool = module.get<Pool>('DATABASE_CONNECTION');
+    app = module.createNestApplication();
+    await app.init();
   });
 
   beforeEach(async () => {
@@ -62,20 +67,31 @@ describe('StudentsController', () => {
 
   describe('findAll', () => {
     it('should return all students', async () => {
-      expect(await controller.findAll()).toEqual(students);
+      return supertest(app.getHttpServer())
+        .get('/students')
+        .expect(200)
+        .then((res) => {
+          expect(res.body).toEqual(students);
+        });
     });
   });
 
   describe('findOne', () => {
-    it('should return a student', async () => {
+    it('should return a student', () => {
       const student = students[1];
-      expect(await controller.findOne(student.id.toString())).toEqual(
-        students.find((s) => s.id === student.id),
-      );
+      console.log(student);
+      return supertest(app.getHttpServer())
+        .get(`/students/${student.id}`)
+        .expect(200)
+        .then((res) => {
+          expect(res.body).toEqual(student);
+        });
     });
 
     it('should throw an error when student does not exist', async () => {
-      await expect(controller.findOne(getNonExistingId())).rejects.toThrow();
+      return supertest(app.getHttpServer())
+        .get(`/students/${getNonExistingId()}`)
+        .expect(404);
     });
   });
 
@@ -86,12 +102,21 @@ describe('StudentsController', () => {
         courseId: courses[10].id,
         semester: 1,
       };
-      expect(students).not.toContainEqual(await controller.create(student));
+      return supertest(app.getHttpServer())
+        .post('/students')
+        .send(student)
+        .expect(201)
+        .then((res) => {
+          expect(students).not.toContainEqual(res.body);
+        });
     });
 
     it('should throw an error when student already exists', async () => {
       const { id, ...studentData } = students[0];
-      await expect(controller.create(studentData)).rejects.toThrow();
+      return supertest(app.getHttpServer())
+        .post('/students')
+        .send(studentData)
+        .expect(409);
     });
   });
 
@@ -99,28 +124,28 @@ describe('StudentsController', () => {
     it('should update a student', async () => {
       const { id, ...studentData } = students[10];
       const result = { updated: 1 };
-      expect(await controller.update(id.toString(), studentData)).toEqual(
-        result,
-      );
+      return supertest(app.getHttpServer())
+        .patch(`/students/${id}`)
+        .send(studentData)
+        .expect(200)
+        .then((res) => {
+          expect(res.body).toEqual(result);
+        });
     });
 
     it('should throw an error when student does not exist', async () => {
-      await expect(
-        controller.update(getNonExistingId(), {
-          name: 'John',
-          courseId: 1,
-          semester: 1,
-        }),
-      ).rejects.toThrow();
+      return supertest(app.getHttpServer())
+        .patch(`/students/${getNonExistingId()}`)
+        .expect(404);
     });
   });
 
   describe('remove', () => {
     it('should remove a student', async () => {
       const student = students[5];
-      expect(await controller.remove(student.id.toString())).toEqual({
-        deleted: 1,
-      });
+      return supertest(app.getHttpServer())
+        .delete(`/students/${student.id}`)
+        .expect(204);
     });
   });
 });
