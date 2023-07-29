@@ -1,15 +1,19 @@
 import { ConfigModule } from '@nestjs/config';
+import { NestApplication } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { Pool } from 'pg';
 import { Student } from 'src/students/entities/student.entity';
-import { addFixtures, getFixtures } from '../../test/fixtures/fixtures';
+import * as supertest from 'supertest';
+import {
+  addFixtures,
+  deleteFixtures,
+  getFixtures,
+} from '../../test/fixtures/fixtures';
 import { testDatabaseProvider } from '../../test/test-database.provider';
 import { CoursesController } from './courses.controller';
 import { CoursesRepository } from './courses.repository';
 import { CoursesService } from './courses.service';
 import { Course } from './entities/course.entity';
-import * as supertest from 'supertest';
-import { NestApplication } from '@nestjs/core';
 
 describe('CoursesController', () => {
   let controller: CoursesController;
@@ -47,8 +51,7 @@ describe('CoursesController', () => {
   });
 
   afterEach(async () => {
-    await pool.query('DELETE FROM students');
-    await pool.query('DELETE FROM courses');
+    await deleteFixtures(pool);
   });
 
   afterAll(async () => {

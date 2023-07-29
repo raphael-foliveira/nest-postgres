@@ -32,6 +32,11 @@ export const addFixtures = async (pool: Pool) => {
   await pool.query(studentsFixtures(courseIds.rows.map((r) => r.id)));
 };
 
+export const deleteFixtures = async (pool: Pool) => {
+  await pool.query('DELETE FROM students');
+  await pool.query('DELETE FROM courses');
+};
+
 export const getFixtures = async (pool: Pool) => {
   return {
     students: await pool
