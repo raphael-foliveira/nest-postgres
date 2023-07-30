@@ -40,11 +40,7 @@ export class StudentsRepository {
     return queryResult.rows.map((row) => ({
       id: row.id,
       name: row.name,
-      course: {
-        id: row.courseid,
-        name: row.coursename,
-        length: row.courselength,
-      },
+      courseId: row.courseid,
       semester: row.semester,
     }));
   }
@@ -68,11 +64,7 @@ export class StudentsRepository {
     return {
       id: queryResult.rows[0].id,
       name: queryResult.rows[0].name,
-      course: {
-        id: queryResult.rows[0].courseid,
-        name: queryResult.rows[0].coursename,
-        length: queryResult.rows[0].courselength,
-      },
+      courseId: queryResult.rows[0].courseid,
       semester: queryResult.rows[0].semester,
     };
   }

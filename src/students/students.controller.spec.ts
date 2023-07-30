@@ -4,24 +4,64 @@ import { StudentsController } from './students.controller';
 import { StudentsRepository } from './students.repository';
 import { StudentsService } from './students.service';
 import { CoursesRepository } from '../courses/courses.repository';
+import { Pool } from 'pg';
+import { testDatabaseProvider } from '../../test/test-database.provider';
+import { ConfigModule } from '@nestjs/config';
+import {
+  addFixtures,
+  deleteFixtures,
+  getFixtures,
+} from '../../test/fixtures/fixtures';
+import { Course } from '../../src/courses/entities/course.entity';
+import { CreateStudentDto } from './dto/create-student.dto';
+import * as supertest from 'supertest';
+import { NestApplication } from '@nestjs/core';
 
 describe('StudentsController', () => {
   let controller: StudentsController;
-  let mockPool: { query: jest.Mock };
+  let pool: Pool;
+  let students: Student[];
+  let courses: Course[];
+  let app: NestApplication;
 
+  const getNonExistingId = () => {
+    let nonExistingId = 1;
+    while (students.map((s) => s.id).includes(nonExistingId)) {
+      nonExistingId++;
+    }
+    return nonExistingId.toString();
+  };
   beforeAll(async () => {
-    mockPool = { query: jest.fn() };
-
     const module = await Test.createTestingModule({
+      imports: [ConfigModule.forRoot()],
       controllers: [StudentsController],
       providers: [
         StudentsService,
         StudentsRepository,
         CoursesRepository,
-        { provide: 'DATABASE_CONNECTION', useValue: mockPool },
+        testDatabaseProvider,
       ],
     }).compile();
     controller = module.get<StudentsController>(StudentsController);
+    pool = module.get<Pool>('DATABASE_CONNECTION');
+    app = module.createNestApplication();
+    await app.init();
+  });
+
+  beforeEach(async () => {
+    await addFixtures(pool);
+
+    const fixtures = await getFixtures(pool);
+    students = fixtures.students;
+    courses = fixtures.courses;
+  });
+
+  afterEach(async () => {
+    await deleteFixtures(pool);
+  });
+
+  afterAll(async () => {
+    await pool.end();
   });
 
   it('should be defined', () => {
@@ -30,133 +70,84 @@ describe('StudentsController', () => {
 
   describe('findAll', () => {
     it('should return all students', async () => {
-      const result: Student[] = [
-        {
-          id: 1,
-          name: 'John',
-          semester: 1,
-          course: { id: 1, name: 'Math', length: 8 },
-        },
-        {
-          id: 2,
-          name: 'Doe',
-          semester: 1,
-          course: { id: 1, name: 'Arts', length: 8 },
-        },
-        ,
-      ];
-      mockPool.query.mockResolvedValue({
-        rows: result.map((s) => ({
-          id: s.id,
-          name: s.name,
-          courseid: s.course.id,
-          coursename: s.course.name,
-          courselength: s.course.length,
-          semester: s.semester,
-        })),
-      });
-      expect(await controller.findAll()).toEqual(result);
+      return supertest(app.getHttpServer())
+        .get('/students')
+        .expect(200)
+        .then((res) => {
+          expect(res.body).toEqual(students);
+        });
     });
   });
 
   describe('findOne', () => {
-    it('should return a student', async () => {
-      const result: Student = {
-        id: 1,
-        name: 'John',
-        semester: 1,
-        course: { id: 1, name: 'Math', length: 8 },
-      };
-      mockPool.query.mockResolvedValue({
-        rows: [
-          {
-            id: result.id,
-            name: result.name,
-            courseid: result.course.id,
-            coursename: result.course.name,
-            courselength: result.course.length,
-            semester: result.semester,
-          },
-        ],
-      });
-      expect(await controller.findOne('1')).toEqual(result);
+    it('should return a student', () => {
+      const student = students[1];
+      return supertest(app.getHttpServer())
+        .get(`/students/${student.id}`)
+        .expect(200)
+        .then((res) => {
+          expect(res.body).toEqual(student);
+        });
     });
 
     it('should throw an error when student does not exist', async () => {
-      mockPool.query.mockResolvedValue({
-        rows: [],
-      });
-      await expect(controller.findOne('1')).rejects.toThrow();
+      return supertest(app.getHttpServer())
+        .get(`/students/${getNonExistingId()}`)
+        .expect(404);
     });
   });
 
   describe('create', () => {
     it('should create a student', async () => {
-      const result = { id: 1 };
-      mockPool.query.mockResolvedValue({
-        rows: [{ id: 1 }],
-      });
-      expect(
-        await controller.create({
-          name: 'John',
-          courseId: 1,
-          semester: 1,
-        }),
-      ).toEqual(result);
+      const student: CreateStudentDto = {
+        name: 'John',
+        courseId: courses[10].id,
+        semester: 1,
+      };
+      return supertest(app.getHttpServer())
+        .post('/students')
+        .send(student)
+        .expect(201)
+        .then((res) => {
+          expect(students).not.toContainEqual(res.body);
+        });
     });
 
     it('should throw an error when student already exists', async () => {
-      mockPool.query.mockResolvedValue({
-        rowCount: 0,
-      });
-      await expect(
-        controller.create({
-          name: 'John',
-          courseId: 1,
-          semester: 1,
-        }),
-      ).rejects.toThrow();
+      const { id, ...studentData } = students[0];
+      return supertest(app.getHttpServer())
+        .post('/students')
+        .send(studentData)
+        .expect(409);
     });
   });
 
   describe('update', () => {
     it('should update a student', async () => {
+      const { id, ...studentData } = students[10];
       const result = { updated: 1 };
-      mockPool.query.mockResolvedValue({
-        rowCount: 1,
-        rows: [{ updated: 1 }],
-      });
-      expect(
-        await controller.update('1', {
-          name: 'John',
-          courseId: 1,
-          semester: 1,
-        }),
-      ).toEqual(result);
+      return supertest(app.getHttpServer())
+        .patch(`/students/${id}`)
+        .send(studentData)
+        .expect(200)
+        .then((res) => {
+          expect(res.body).toEqual(result);
+        });
     });
 
     it('should throw an error when student does not exist', async () => {
-      mockPool.query.mockResolvedValue({
-        rowCount: 0,
-      });
-      await expect(
-        controller.update('1', {
-          name: 'John',
-          courseId: 1,
-          semester: 1,
-        }),
-      ).rejects.toThrow();
+      return supertest(app.getHttpServer())
+        .patch(`/students/${getNonExistingId()}`)
+        .expect(404);
     });
   });
 
   describe('remove', () => {
     it('should remove a student', async () => {
-      const result = { deleted: 1 };
-      mockPool.query.mockResolvedValue({
-        rowCount: 1,
-        rows: [{ deleted: 1 }],
-      });
-      expect(await controller.remove('1')).toEqual(result);
+      const student = students[5];
+      return supertest(app.getHttpServer())
+        .delete(`/students/${student.id}`)
+        .expect(204);
     });
   });
 });

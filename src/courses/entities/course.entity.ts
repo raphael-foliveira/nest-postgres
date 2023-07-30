@@ -5,10 +5,3 @@ export class Course {
   name: string;
   length: number;
 }
-
-export class CourseWithStudents {
-  id: number;
-  name: string;
-  length: number;
-  students: Student[];
-}
