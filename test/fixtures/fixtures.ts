@@ -1,10 +1,13 @@
 import { Pool } from 'pg';
+import { faker } from '@faker-js/faker';
 
 const courseFixtures = () => {
+  const numberOfCourses = 5;
+
   let query = 'INSERT INTO courses (name, length) VALUES ';
-  for (let i = 1; i <= 15; i++) {
+  for (let i = 1; i <= numberOfCourses; i++) {
     query += `('Course ${i}', ${Math.floor(Math.random() * 10)}),`;
-    if (i === 15) {
+    if (i === numberOfCourses) {
       query = query.slice(0, -1);
       query += ';';
     }
@@ -13,12 +16,13 @@ const courseFixtures = () => {
 };
 
 const studentsFixtures = (courseIds: number[]) => {
-  let query = 'INSERT INTO students (name, courseId, semester) VALUES ';
-  for (let i = 1; i <= 40; i++) {
-    query += `('Student ${i}', ${Math.floor(
+  const numberOfStudents = 10;
+  let query = 'INSERT INTO students (name, courseId, semester) VALUES\n';
+  for (let i = 1; i <= numberOfStudents; i++) {
+    query += `('${faker.person.fullName().replace(`'`, ``)}', ${Math.floor(
       courseIds[Math.floor(Math.random() * courseIds.length)],
-    )}, ${Math.floor(Math.random() * 10)}), `;
-    if (i === 40) {
+    )}, ${Math.floor(Math.random() * 9 + 1)}),\n`;
+    if (i === numberOfStudents) {
       query = query.slice(0, -2);
       query += ';';
     }
