@@ -11,7 +11,7 @@ export const testDatabaseProvider: Provider = {
       user: process.env.TEST_DATABASE_USER,
       host: process.env.TEST_DATABASE_HOST,
       password: process.env.TEST_DATABASE_PASSWORD,
-      port: parseInt(process.env.TEST_DATABASE_PORT),
+      port: +process.env.TEST_DATABASE_PORT,
     });
     await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
     await pool.query(schema);

@@ -2,7 +2,6 @@ import { ConfigModule } from '@nestjs/config';
 import { NestApplication } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { Pool } from 'pg';
-import { Student } from 'src/students/entities/student.entity';
 import * as supertest from 'supertest';
 import {
   addFixtures,
@@ -16,9 +15,7 @@ import { CoursesService } from './courses.service';
 import { Course } from './entities/course.entity';
 
 describe('CoursesController', () => {
-  let controller: CoursesController;
   let pool: Pool;
-  let students: Student[];
   let courses: Course[];
   let app: NestApplication;
 
@@ -36,7 +33,6 @@ describe('CoursesController', () => {
       controllers: [CoursesController],
       providers: [CoursesService, CoursesRepository, testDatabaseProvider],
     }).compile();
-    controller = module.get<CoursesController>(CoursesController);
     pool = module.get<Pool>('DATABASE_CONNECTION');
     app = module.createNestApplication();
     await app.init();
@@ -46,7 +42,6 @@ describe('CoursesController', () => {
     await addFixtures(pool);
 
     const fixtures = await getFixtures(pool);
-    students = fixtures.students;
     courses = fixtures.courses;
   });
 
@@ -56,10 +51,6 @@ describe('CoursesController', () => {
 
   afterAll(async () => {
     await pool.end();
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
   });
 
   describe('findAll', () => {

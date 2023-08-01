@@ -1,28 +1,36 @@
-import { Test } from '@nestjs/testing';
-import { Student } from './entities/student.entity';
-import { StudentsController } from './students.controller';
-import { StudentsRepository } from './students.repository';
-import { StudentsService } from './students.service';
-import { CoursesRepository } from '../courses/courses.repository';
-import { Pool } from 'pg';
-import { testDatabaseProvider } from '../../test/test-database.provider';
 import { ConfigModule } from '@nestjs/config';
+import { NestApplication } from '@nestjs/core';
+import { Test } from '@nestjs/testing';
+import { Pool, PoolClient } from 'pg';
+import * as supertest from 'supertest';
 import {
   addFixtures,
   deleteFixtures,
   getFixtures,
 } from '../../test/fixtures/fixtures';
-import { Course } from '../../src/courses/entities/course.entity';
+import { testDatabaseProvider } from '../../test/test-database.provider';
+import { CoursesRepository } from '../courses/courses.repository';
+import { Course } from '../courses/entities/course.entity';
 import { CreateStudentDto } from './dto/create-student.dto';
-import * as supertest from 'supertest';
-import { NestApplication } from '@nestjs/core';
+import { Student } from './entities/student.entity';
+import { StudentsController } from './students.controller';
+import { StudentsRepository } from './students.repository';
+import { StudentsService } from './students.service';
 
-describe('StudentsController', () => {
-  let controller: StudentsController;
+describe('students integration', () => {
   let pool: Pool;
   let students: Student[];
   let courses: Course[];
   let app: NestApplication;
+  let client: PoolClient;
+
+  const randomStudent = () => {
+    return students[Math.floor(Math.random() * students.length)];
+  };
+
+  const randomCourse = () => {
+    return courses[Math.floor(Math.random() * courses.length)];
+  };
 
   const getNonExistingId = () => {
     let nonExistingId = 1;
@@ -42,10 +50,13 @@ describe('StudentsController', () => {
         testDatabaseProvider,
       ],
     }).compile();
-    controller = module.get<StudentsController>(StudentsController);
     pool = module.get<Pool>('DATABASE_CONNECTION');
     app = module.createNestApplication();
     await app.init();
+  });
+
+  afterAll(async () => {
+    await pool.end();
   });
 
   beforeEach(async () => {
@@ -58,14 +69,6 @@ describe('StudentsController', () => {
 
   afterEach(async () => {
     await deleteFixtures(pool);
-  });
-
-  afterAll(async () => {
-    await pool.end();
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
   });
 
   describe('findAll', () => {
@@ -81,7 +84,7 @@ describe('StudentsController', () => {
 
   describe('findOne', () => {
     it('should return a student', () => {
-      const student = students[1];
+      const student = randomStudent();
       return supertest(app.getHttpServer())
         .get(`/students/${student.id}`)
         .expect(200)
@@ -101,7 +104,7 @@ describe('StudentsController', () => {
     it('should create a student', async () => {
       const student: CreateStudentDto = {
         name: 'John',
-        courseId: courses[10].id,
+        courseId: randomCourse().id,
         semester: 1,
       };
       return supertest(app.getHttpServer())
@@ -114,7 +117,7 @@ describe('StudentsController', () => {
     });
 
     it('should throw an error when student already exists', async () => {
-      const { id, ...studentData } = students[0];
+      const { id, ...studentData } = randomStudent();
       return supertest(app.getHttpServer())
         .post('/students')
         .send(studentData)
@@ -124,7 +127,7 @@ describe('StudentsController', () => {
 
   describe('update', () => {
     it('should update a student', async () => {
-      const { id, ...studentData } = students[10];
+      const { id, ...studentData } = randomStudent();
       const result = { updated: 1 };
       return supertest(app.getHttpServer())
         .patch(`/students/${id}`)
@@ -144,7 +147,7 @@ describe('StudentsController', () => {
 
   describe('remove', () => {
     it('should remove a student', async () => {
-      const student = students[5];
+      const student = randomStudent();
       return supertest(app.getHttpServer())
         .delete(`/students/${student.id}`)
         .expect(204);
