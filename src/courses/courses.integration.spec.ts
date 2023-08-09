@@ -13,6 +13,7 @@ import { CoursesController } from './courses.controller';
 import { CoursesRepository } from './courses.repository';
 import { CoursesService } from './courses.service';
 import { Course } from './entities/course.entity';
+import { TerminusModule } from '@nestjs/terminus';
 
 describe('CoursesController', () => {
   let pool: Pool;
@@ -29,7 +30,7 @@ describe('CoursesController', () => {
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
-      imports: [ConfigModule.forRoot()],
+      imports: [TerminusModule, ConfigModule.forRoot()],
       controllers: [CoursesController],
       providers: [CoursesService, CoursesRepository, testDatabaseProvider],
     }).compile();

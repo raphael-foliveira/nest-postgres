@@ -1,5 +1,6 @@
 import { ConfigModule } from '@nestjs/config';
 import { NestApplication } from '@nestjs/core';
+import { TerminusModule } from '@nestjs/terminus';
 import { Test } from '@nestjs/testing';
 import { Pool, PoolClient } from 'pg';
 import * as supertest from 'supertest';
@@ -41,7 +42,7 @@ describe('students integration', () => {
   };
   beforeAll(async () => {
     const module = await Test.createTestingModule({
-      imports: [ConfigModule.forRoot()],
+      imports: [TerminusModule, ConfigModule.forRoot()],
       controllers: [StudentsController],
       providers: [
         StudentsService,
