@@ -1,5 +1,7 @@
 import { Pool } from 'pg';
 import { readFileSync } from 'fs';
+import { schema } from './schema';
+import { migrations } from './migrations/migrations';
 
 export const runMigrations = async (pool: Pool) => {
   const schema = readFileSync('./src/database/schema.sql').toString();
@@ -16,6 +18,10 @@ export const databaseProvider = {
       password: process.env.DATABASE_PASSWORD,
       port: parseInt(process.env.DATABASE_PORT),
     });
+    await pool.query(schema);
+    for (let m in migrations) {
+      await pool.query(migrations[m].upgrade);
+    }
     return pool;
   },
 };

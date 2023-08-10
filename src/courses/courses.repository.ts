@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Pool } from 'pg';
 import { CreateCourseDto } from './dto/create-course.dto';
-import { CourseWithStudents } from './entities/course.entity';
+import { Course } from './entities/course.entity';
 
 @Injectable()
 export class CoursesRepository {
@@ -33,25 +33,16 @@ export class CoursesRepository {
     return queryResult.rows;
   }
 
-  async findOne(id: number): Promise<CourseWithStudents> {
+  async findOne(id: number): Promise<Course> {
     const queryResult = await this.client.query(
       `
         SELECT * FROM courses WHERE id = $1;
     `,
       [id],
     );
-    const studentsQueryResult = await this.client.query(
-      `
-        SELECT students.id, students.name, students.semester FROM students WHERE courseId = $1;
-    `,
-      [id],
-    );
     if (queryResult.rowCount === 0) {
       throw new NotFoundException(`Course with id ${id} not found`);
     }
-    return {
-      ...queryResult.rows[0],
-      students: studentsQueryResult.rows,
-    };
+    return queryResult.rows[0];
   }
 }
