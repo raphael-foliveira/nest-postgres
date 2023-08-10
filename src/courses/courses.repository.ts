@@ -22,7 +22,6 @@ export class CoursesRepository {
       );
       return queryResult.rows[0];
     } catch (e) {
-      console.log(e);
       throw new ConflictException('Course already exists');
     }
   }

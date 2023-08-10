@@ -19,5 +19,3 @@ export const databaseProvider = {
     return pool;
   },
 };
-
-
