@@ -19,7 +19,7 @@ export const databaseProvider = {
       port: parseInt(process.env.DATABASE_PORT),
     });
     await pool.query(schema);
-    for (let m in migrations) {
+    for (const m in migrations) {
       await pool.query(migrations[m].upgrade);
     }
     return pool;
