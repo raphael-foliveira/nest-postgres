@@ -16,10 +16,10 @@ export const databaseProvider = {
       user: process.env.DATABASE_USER,
       host: process.env.DATABASE_HOST,
       password: process.env.DATABASE_PASSWORD,
-      port: parseInt(process.env.DATABASE_PORT),
+      port: +process.env.DATABASE_PORT,
     });
     await pool.query(schema);
-    for (let m in migrations) {
+    for (const m in migrations) {
       await pool.query(migrations[m].upgrade);
     }
     return pool;
