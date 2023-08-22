@@ -2,9 +2,28 @@ services:
   database:
     image: postgres:alpine
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
-    
+
+  app:
+    build: .
+    command: yarn start:dev
+    ports:
+      - '3000:3000'
+    environment:
+      TEST_DATABASE_NAME: ${TEST_DATABASE_NAME}
+      TEST_DATABASE_USER: ${TEST_DATABASE_USER}
+      TEST_DATABASE_HOST: ${TEST_DATABASE_HOST}
+      TEST_DATABASE_PASSWORD: ${TEST_DATABASE_PASSWORD}
+      TEST_DATABASE_PORT: ${TEST_DATABASE_PORT}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_PORT: ${DATABASE_PORT}
+    volumes:
+      - ./src:/app/src
+      - ./test:/app/test
