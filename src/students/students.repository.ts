@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -13,6 +8,7 @@ export class StudentsRepository {
   constructor(@Inject('DATABASE_CONNECTION') private client: Pool) {}
 
   async create(createStudentDto: CreateStudentDto) {
+    await this.checkIfCourseExists(createStudentDto.courseId);
     const insertResult = await this.client.query(
       'INSERT INTO students (name, courseId, semester) VALUES ($1, $2, $3) RETURNING id',
       [
@@ -61,15 +57,19 @@ export class StudentsRepository {
     if (queryResult.rows.length === 0) {
       throw new NotFoundException(`Student with id ${id} does not exist`);
     }
+    const { name, courseid, semester } = queryResult.rows[0];
     return {
-      id: queryResult.rows[0].id,
-      name: queryResult.rows[0].name,
-      courseId: queryResult.rows[0].courseid,
-      semester: queryResult.rows[0].semester,
+      id,
+      name,
+      courseId: courseid,
+      semester,
     };
   }
 
   async update(id: number, updateStudentDto: UpdateStudentDto) {
+    if (updateStudentDto.courseId) {
+      await this.checkIfCourseExists(updateStudentDto.courseId);
+    }
     await this.client.query('BEGIN');
     try {
       await this.findOne(id);
@@ -95,5 +95,17 @@ export class StudentsRepository {
       [id],
     );
     return { deleted: queryResult.rowCount };
+  }
+
+  private async checkIfCourseExists(courseId: number) {
+    const course = await this.client.query(
+      `
+      SELECT * FROM courses WHERE id = $1;
+    `,
+      [courseId],
+    );
+    if (course.rowCount === 0) {
+      throw new NotFoundException('Course not found');
+    }
   }
 }

@@ -3,17 +3,12 @@ import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { Student } from './entities/student.entity';
 import { StudentsRepository } from './students.repository';
-import { CoursesRepository } from '../courses/courses.repository';
 
 @Injectable()
 export class StudentsService {
-  constructor(
-    private repository: StudentsRepository,
-    private coursesRepository: CoursesRepository,
-  ) {}
+  constructor(private repository: StudentsRepository) {}
 
   async create(createStudentDto: CreateStudentDto): Promise<{ id: number }> {
-    await this.coursesRepository.findOne(createStudentDto.courseId);
     try {
       return await this.repository.create(createStudentDto);
     } catch {
@@ -30,7 +25,6 @@ export class StudentsService {
   }
 
   async update(id: number, updateStudentDto: UpdateStudentDto) {
-    await this.coursesRepository.findOne(updateStudentDto.courseId);
     return await this.repository.update(id, updateStudentDto);
   }
 
