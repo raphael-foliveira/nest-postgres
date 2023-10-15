@@ -9,11 +9,7 @@ export class StudentsService {
   constructor(private repository: StudentsRepository) {}
 
   async create(createStudentDto: CreateStudentDto): Promise<{ id: number }> {
-    try {
-      return await this.repository.create(createStudentDto);
-    } catch {
-      throw new ConflictException('Student already exists');
-    }
+    return await this.repository.create(createStudentDto);
   }
 
   async findAll(): Promise<Student[]> {
