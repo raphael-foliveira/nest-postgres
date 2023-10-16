@@ -13,15 +13,29 @@ export class StudentsRepository {
   constructor(@Inject('DATABASE_CONNECTION') private client: Pool) {}
 
   async create(createStudentDto: CreateStudentDto) {
-    const insertResult = await this.client.query(
-      'INSERT INTO students (name, courseId, semester) VALUES ($1, $2, $3) RETURNING id',
-      [
-        createStudentDto.name,
-        createStudentDto.courseId,
-        createStudentDto.semester,
-      ],
-    );
-    return insertResult.rows[0];
+    try {
+      const insertResult = await this.client.query(
+        'INSERT INTO students (name, courseId, semester) VALUES ($1, $2, $3) RETURNING id',
+        [
+          createStudentDto.name,
+          createStudentDto.courseId,
+          createStudentDto.semester,
+        ],
+      );
+      return insertResult.rows[0];
+    } catch (error) {
+      if (error.code === '23503') {
+        throw new NotFoundException(
+          `Course with id ${createStudentDto.courseId} does not exist`,
+        );
+      }
+      if (error.code === '23505') {
+        throw new ConflictException(
+          `Student with name ${createStudentDto.name} already exists`,
+        );
+      }
+      throw error;
+    }
   }
 
   async findAll() {
@@ -61,11 +75,12 @@ export class StudentsRepository {
     if (queryResult.rows.length === 0) {
       throw new NotFoundException(`Student with id ${id} does not exist`);
     }
+    const { name, courseid, semester } = queryResult.rows[0];
     return {
-      id: queryResult.rows[0].id,
-      name: queryResult.rows[0].name,
-      courseId: queryResult.rows[0].courseid,
-      semester: queryResult.rows[0].semester,
+      id,
+      name,
+      courseId: courseid,
+      semester,
     };
   }
 
@@ -84,6 +99,16 @@ export class StudentsRepository {
       return { updated: queryResult.rowCount };
     } catch (error) {
       await this.client.query('ROLLBACK');
+      if (error.code === '23503') {
+        throw new NotFoundException(
+          `Course with id ${updateStudentDto.courseId} does not exist`,
+        );
+      }
+      if (error.code === '23505') {
+        throw new ConflictException(
+          `Student with name ${updateStudentDto.name} already exists`,
+        );
+      }
       throw error;
     }
   }
